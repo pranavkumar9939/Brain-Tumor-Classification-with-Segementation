@@ -108,5 +108,71 @@ class BRISCDatasetInfo:
             print(f"  Masks:  {stats['segmentation'][split]['num_masks']}")
 
 
+class BRISCSegmentationDatatset:
 
+    def __init__(
+        self,
+        images_dir: Path,
+        masks_dir: Path,
+        transform: Optional[A.Compose] = None,
+        image_size: Tuple[int, int] = IMAGE_SIZE
+    ):
+
+        self.images_dir = Path(images_dir)
+        self.masks_dir = Path(masks_dir)
+        self.transform = transform
+        self.image_size = image_size
+
+        image_files = sorted(list(self.images_dir.glob('*.jpg')))
+
+        self.valid_samples = []
+
+        for img_file in image_files:
+            msk_file = self.masks_dir / f"{img_file.stem}.png"
+
+            if msk_file.exists():
+                self.valid_samples.append((img_file, msk_file))
+
+        print(f"Get {len(self.valid_samples)} valid pairs of image and mask.")
+
+
+
+    def __len__(self):
+        return len(self.valid_samples)
+
+
+    def __getitem__(self, idx: int):
+
+        img_path, mask_path = self.valid_samples[idx]
+
+        image = cv2.imread(str(img_path), cv2.IMREAD_GRAYSCALE)
+        mask = cv2.imread(str(mask_path), cv2.IMREAD_GRAYSCALE)
+
+        # Resizing the image
+
+        image = cv2.resize(image, self.image_size)
+        mask = cv2.resize(mask, self.image_size, interpolation=cv2.INTER_NEAREST)
+
+        # Aplly the Normalization in range [0, 1]
+
+        image = image.astype(np.float32) / 255.0
+        mask = mask.astype(np.float32) / 255.0
+
+        # Aplly transformation
+
+        if self.transform:
+            transformed = self.transform(image=image, mask= mask)
+            image = transformed['image']
+            mask = transformed['mask']
+
+        else:
+            image = torch.from_numpy(image).unsqueeze(0)
+            mask = torch.from_numpy(mask).unsqueeze(0)
+
+        if mask.dim() == 2:
+            mask = mask.unsqueeze(0)
+
+        mask = (mask > 0.5).float()
+
+        return image, mask
   
