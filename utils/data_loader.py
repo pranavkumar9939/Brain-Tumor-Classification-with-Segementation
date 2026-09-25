@@ -108,7 +108,7 @@ class BRISCDatasetInfo:
             print(f"  Masks:  {stats['segmentation'][split]['num_masks']}")
 
 
-class BRISCSegmentationDatatset:
+class BRISCSegmentationDatatset(Dataset):
 
     def __init__(
         self,
@@ -175,4 +175,55 @@ class BRISCSegmentationDatatset:
         mask = (mask > 0.5).float()
 
         return image, mask
-  
+
+
+
+class BRISCClassificationDataset(Dataset):
+
+    def __init__(
+        self,
+        root_dir: Path,
+        transform: Optional[A.Compose] = None,
+        image_size: Tuple[int, int] = IMAGE_SIZE
+    ):
+
+        self.root_dir = root_dir
+        self.transform = transform
+        self.image_size = image_size
+
+        self.samples = []
+
+        for class_name, class_idx in CLASS_LABELS:
+            class_dir = self.root_dir / class_name
+
+            if class_dir.exists():
+                for img_file in class_dir.glob('*.jpg'):
+                    self.samples.append((img_file, class_idx))
+
+        print(f"Found {len(self.samples)} valid classification sample")
+
+
+    def __len__(self):
+        return len(self.samples)
+
+
+    def __getitem__(self, idx: int):
+
+        img_path, label = self.samples[idx]
+
+        image = cv2.imread(str(img_path), cv2.IMREAD_GRAYSCALE)
+
+        image = cv2.resize(image, self.image_size)
+
+        image = image.astype(np.float32) / 255.0
+
+        if self.transform:
+            transformed = self.transform(image = image)
+            image = transformed['image']
+
+        else:
+            image = torch.from_numpy(image).unsqueeze(0)
+
+        return image, label
+
+    
