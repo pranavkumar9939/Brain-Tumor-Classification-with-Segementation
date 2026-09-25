@@ -8,7 +8,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent
 Data_Root = PROJECT_ROOT / "brisc2025"
 Classification_Root = Data_Root / "classification_task"
-Segmentation_Root = Data_Root / "segementation_task"
+Segmentation_Root = Data_Root / "segmentation_task"
 
 # Trainning and Testing Directory
 
