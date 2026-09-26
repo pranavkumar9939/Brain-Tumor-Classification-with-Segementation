@@ -226,4 +226,90 @@ class BRISCClassificationDataset(Dataset):
 
         return image, label
 
-    
+
+
+def get_train_transforms():
+
+    return A.Compose([
+        A.HorizontalFlip(p=0.5),
+        A.VerticalFlip(p=0.5),
+        A.Rotate(limit = 15, p = 0.5),
+        A.Affine(
+            translate_percent={'x': (-0.1,0.1), 'y': (0.1, 0.1)},
+            scale = (0.9, 1.1),
+            p = 0.5
+        ),
+        A.RandomBrightnessContrast(
+            brightness_limit=0.2,
+            contrast_limit=0.2,
+            p=0.5
+        ),
+        A.GaussNoise(p=0.3),
+        ToTensorV2()
+    ])
+
+
+
+def get_val_transforms():
+
+    return A.Compose([
+        ToTensorV2()
+    ])
+
+
+
+def create_data_loaders(
+    batch_size: int = BATCH_SIZE,
+    val_split: float = VALIDATION_SPLIT,
+    num_workers: int = 4
+):
+
+    seg_train_dataset = BRISCSegmentationDatatset(
+        images_dir= Segmentation_Train / 'images',
+        masks_dir= Segmentation_Train / 'masks',
+        transform= get_train_transforms()
+    )
+
+    train_size = int((1 - val_split) * len(seg_train_dataset))
+    val_size = len(seg_train_dataset) - train_size
+
+    train_dataset, val_dataset = torch.utils.data.random_split(
+        seg_train_dataset,
+        [train_size, val_size],
+        generator= torch.Generator().manual_seed(RANDOM_SEED)
+    )
+
+    seg_test_dataset = BRISCSegmentationDatatset(
+        images_dir= Segmentation_Test / 'images',
+        masks_dir= Segmentation_Test / 'masks',
+        transform= get_val_transforms()
+    )
+
+
+    loaders = {
+        'train': DataLoader(
+            train_dataset,
+            batch_size= batch_size,
+            shuffle= True,
+            num_workers= num_workers,
+            pin_memory= True
+        ),
+
+        'val': DataLoader(
+            val_dataset,
+            batch_size= batch_size,
+            shuffle= False,
+            num_workers= num_workers,
+            pin_memory= True
+        ),
+
+        'test': DataLoader(
+            seg_test_dataset,
+            batch_size= batch_size,
+            shuffle= False,
+            num_workers= num_workers,
+            pin_memory= True
+        )
+    }
+
+    return loaders
