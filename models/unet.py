@@ -27,3 +27,25 @@ class DoubleConv(nn.module):
         def forward(self, x):
 
             return self.double_conv(x)
+
+
+class down(nn.module):
+
+    def __init__(self, in_channels: int, out_channels: int):
+
+        super(down, self).__init__()
+
+        self.maxpool_conv = nn.Sequential(
+            # applying maxpool
+            nn.MaxPool2d(2),
+
+            # double conv
+
+            DoubleConv(in_channels, out_channels)
+        )
+
+    def forward(self, x):
+
+        return self.maxpool_conv(x)
+
+
