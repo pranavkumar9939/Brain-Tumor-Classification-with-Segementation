@@ -181,3 +181,78 @@ class Unet(nn.Module):
         x5 = self.down4(x4)
 
         return x5
+
+
+class UNetWithClassifier:
+    """
+    Unet with classification head attached to encoder 
+    for joint training or seperate training experiment
+    """
+
+    def __init__(
+        self, 
+        in_channels: int = 1,
+        num_classes: int = 4,
+        base_filters: int = 64,
+        dropout: float = 0.5
+    ):
+
+        super(UNetWithClassifier, self).__init__()
+
+        self.unet = Unet(in_channels= in_channels, out_channels= 1, base_filters= base_filters)
+
+        bottleneck_channels = base_filters * 8 # 512
+
+        self.classifier = nn.Sequential(
+            nn.AdaptiveAvgPool2d((1, 1)), # 512*16*16 -> 512*1*1
+            nn.Flatten(), # 512*1*1 -> 512
+            nn.Linear(bottleneck_channels, 512), # feature extraction
+            nn.ReLU(inplace= True), # Rgularization
+            nn.Dropout(dropout),
+            nn.Linear(512, 256), # Reduce dimension
+            nn.ReLU(inplace = True),
+            nn.Dropout(dropout),
+            nn.Linear(256, num_classes) # final prediction # 4 classes
+        )
+
+
+    def forward(
+        self,
+        x, 
+        return_seg_only: bool = False, 
+        return_cls_only: bool = False
+    ):
+        """
+        1. Run the Unet encoder manually to get the feature
+        """
+
+        # get encoder feature
+
+        x1 = self.unet.inc(x)    # (1, 1, 256, 256) -> (1, 64, 256, 256)
+        x2 = self.unet.down1(x1) # (1, 64, 256, 256) -> (1, 128, 128, 128)
+        x3 = self.unet.down2(x2) # (1, 128, 128, 128) -> (1, 256, 64, 64)
+        x4 = self.unet.down3(x3) # (1, 256, 64, 64) -> (1, 512, 32, 32)
+        x5 = self.unet.down4(x4) # (1, 512, 32, 32) -> (1, 1024, 16, 16)
+
+        # 2. Branch A: Classification
+        # Classification from bottleneck
+
+        cls_logits = self.classifier(x5) # predict class on bottleneck feature
+
+        if return_cls_only:
+            return cls_logits
+
+        # 3. Branch B: Segmentation
+        # Segmentation decoder
+
+        x_up = self.unet.up1(x5, x4)
+        x_up = self.unet.up2(x_up, x3)
+        x_up = self.unet.up3(x_up, x2)
+        x_up = self.unet.up4(x_up, x1)
+
+        seg_logits = self.unet_outc(x_up)
+
+        if return_seg_only:
+            return seg_logits
+
+        return seg_logits, cls_logits
