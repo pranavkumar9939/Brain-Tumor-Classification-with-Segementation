@@ -256,3 +256,39 @@ class UNetWithClassifier:
             return seg_logits
 
         return seg_logits, cls_logits
+
+
+def count_parameters(model):
+    """
+    Counts Parameters in the model
+
+    1. .numel()-> use to calculate total number of elemets in a given tensor
+    2. .parameters -> Method in nn.Module that returns an iterator over the trainable parameters of a model
+    3. .requires_grad-> it is a boolean flag that determines whether a tensor should be tracked for gradient
+        computaion during the backpropagation process
+    """
+
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+
+if __name__ == "main":
+
+    # test the U-Net
+
+    model = Unet(in_channels= 1, out_channels= 1, base_filters= 64)
+    x = torch.randn(2, 1, 256, 256)
+    out = model(x)
+
+    print(f"Input Shape: {x.shape}")
+    print(f"Output Shape: {out.shape}")
+    print(f"Parameters: {count_parameters(model):,}")
+
+    # test UNet with classifier
+
+    model_with_cls = UNetWithClassifier(in_channels= 1, num_classes= 4, base_filters= 64)
+    seg_out, cls_out = model_with_cls(x)
+
+    print("\nUnet with Classifier:")
+    print(f"Segmentation output: {seg_out.shape}")
+    print(f"Classification output: {cls_out.shape}")
+    print(f"Parameters: {count_parameters(model_with_cls):,}")
