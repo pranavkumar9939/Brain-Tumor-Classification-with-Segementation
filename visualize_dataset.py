@@ -163,7 +163,7 @@ def show_segmentation_Train_image():
     plt.title("Tumor Mask")
     plt.axis("off")
 
-    # Overlay
+    # overlay
     plt.subplot(1, 3, 3)
 
     plt.imshow(image, cmap="gray")
