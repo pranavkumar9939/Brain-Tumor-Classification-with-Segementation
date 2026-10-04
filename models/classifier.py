@@ -199,3 +199,42 @@ class SimpleClassifier(nn.Module):
         return x
 
 
+def get_classifier(name: str, num_classes: int = 4, pretrained: bool = False, dropout: float = 0.5):
+    """
+    Factory function to get classifier by name
+    
+    Args:
+        name: One of ['mobilenet', 'efficientnet', 'densenet', 'simple']
+        num_classes: Number of output classes
+        pretrained: Whether to use pretrained weights
+        dropout: Dropout rate
+    
+    Returns:
+        Classifier model
+    """
+    name = name.lower()
+    
+    if name == 'mobilenet':
+        return MobileNetClassifier(num_classes, pretrained, dropout)
+    elif name == 'efficientnet':
+        return EfficientNetClassifier(num_classes, pretrained, dropout)
+    elif name == 'densenet':
+        return DenseNetClassifier(num_classes, pretrained, dropout)
+    elif name == 'simple':
+        return SimpleClassifier(num_classes, dropout)
+    else:
+        raise ValueError(f"Unknown classifier: {name}. Choose from: mobilenet, efficientnet, densenet, simple")
+
+
+if __name__ == "__main__":
+    from .unet import count_parameters
+    
+    # Test all classifiers
+    x = torch.randn(2, 1, 256, 256)
+    
+    for name in ['mobilenet', 'efficientnet', 'densenet', 'simple']:
+        model = get_classifier(name, num_classes=4, pretrained=False)
+        out = model(x)
+        print(f"\n{name.upper()}:")
+        print(f"Output shape: {out.shape}")
+        print(f"Parameters: {count_parameters(model):,}")
