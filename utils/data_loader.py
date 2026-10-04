@@ -193,7 +193,7 @@ class BRISCClassificationDataset(Dataset):
 
         self.samples = []
 
-        for class_name, class_idx in CLASS_LABELS:
+        for class_name, class_idx in CLASS_LABELS.items():
             class_dir = self.root_dir / class_name
 
             if class_dir.exists():

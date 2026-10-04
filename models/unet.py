@@ -33,7 +33,7 @@ class Down(nn.Module):
 
     def __init__(self, in_channels: int, out_channels: int):
 
-        super(down, self).__init__()
+        super(Down, self).__init__()
 
         self.maxpool_conv = nn.Sequential(
             # applying maxpool
@@ -55,7 +55,7 @@ class Up(nn.Module):
 
         super(Up, self).__init__()
 
-        if bilinear():
+        if bilinear:
             self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners= True)
             self.conv = DoubleConv(in_channels, out_channels)
 
@@ -155,9 +155,9 @@ class Unet(nn.Module):
         # Decoder with skip connection
 
         x = self.up1(x5, x4) # UpSample x5(16->32), cat with x4 out:- (1, 512, 32, 32)
-        x = self.up1(x, x3)
-        x = self.up1(x, x2)
-        x = self.up1(x, x1)
+        x = self.up2(x, x3)
+        x = self.up3(x, x2)
+        x = self.up4(x, x1)
 
         # output
 
@@ -183,7 +183,7 @@ class Unet(nn.Module):
         return x5
 
 
-class UNetWithClassifier:
+class UNetWithClassifier(nn.Module):
     """
     Unet with classification head attached to encoder 
     for joint training or seperate training experiment
