@@ -86,3 +86,47 @@ class EfficientNetClassifier(nn.Module):
         return self.efficientnet(x)
 
 
+class DenseNetClassifier(nn.Module):
+    """
+    DenseNet121-based classifier
+    Excellent feature reuse with dense connection
+    """
+
+    def __init__(
+        self,
+        num_classes: int = 4,
+        pretrained: bool = False,
+        dropout: float = 0.5
+    ):
+        super(DenseNetClassifier, self).__init__()
+
+        # Loading Densenet121
+        self.densenet = models.densenet121(pretrained = pretrained)
+
+        # modifying first conv layer for gray scale input
+        original_conv = self.densenet.features.conv0
+        self.densenet.features.conv0 = nn.Conv2d(
+            1,
+            original_conv.out_channels,
+            kernel_size= original_conv.kernel_size,
+            stride = original_conv.stride,
+            padding= original_conv.padding,
+            bias = False
+        )
+
+        # REplacing classifier
+        in_features = self.densenet.classifier.in_features
+        self.densenet.classifier = nn.Sequential(
+            nn.Linear(in_features, 512),
+            nn.ReLU(inplace= True),
+            nn.Dropout(dropout),
+            nn.Linear(512, 256),
+            nn.ReLU(inplace= True),
+            nn.Dropout(dropout),
+            nn.Linear(256, num_classes)
+        )
+
+    def forward(self, x):
+        return self.densenet(x)
+
+
