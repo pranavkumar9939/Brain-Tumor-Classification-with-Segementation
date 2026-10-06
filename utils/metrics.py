@@ -73,4 +73,50 @@ def pixel_accuracy(
     return correct / total
 
 
+class DiceLoss(nn.Module):
+    """
+    Implementing dice loss for binary segmentation
+    """
+
+    def __init__(self, smooth: float = 1e-6):
+        super(DiceLoss, self).__init__()
+        self.smooth = smooth
+
+    def forward(
+        self,
+        pred: torch.Tensor,
+        target: torch.Tensor
+    ):
+        return 1 - dice_coefficent(pred, target, self.smooth)
+
+
+class DiceBCELoss(nn.Module):
+    """
+    Combined Dice and BCE loss for better convergence
+    """
+
+    def __init__(
+        self,
+        dice_weight: float = 0.5,
+        bce_weight: float = 0.5
+    ):
+        super(DiceBCELoss, self).__init__()
+        self.dice_weight = dice_weight
+        self.bce_weight = bce_weight
+        self.dice_loss = DiceLoss()
+        self.bce_loss = nn.BCEWithLogitsLoss()
+
+    def forward(
+        self,
+        pred: torch.Tensor,
+        target: torch.Tensor
+    ):
+        pred_sigmoid = torch.sigmoid(pred)
+
+        dice = self.dice_loss(pred_sigmoid, target)
+        bce = self.bce_loss(pred, target)
+
+        return self.dice_weight * dice + self.bce_weight * bce
+
+
 
