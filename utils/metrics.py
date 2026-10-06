@@ -119,4 +119,47 @@ class DiceBCELoss(nn.Module):
         return self.dice_weight * dice + self.bce_weight * bce
 
 
+class SegmentationMetrics:
+    """
+    Class to track and compute segmentation metrics
+    """
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        """
+        Reset all metrics
+        """
+        self.dice_scores = []
+        self.iou_scores = []
+        self.pixel_accs = []
+
+    def update(
+        self,
+        pred: torch.Tensor,
+        target: torch.Tensor
+    ):
+        """Update metrics with a batch"""
+
+        pred = torch.sigmoid(pred)
+        pred = (pred > 0.5).float()
+        target = (target > 0.5).float()
+
+        dice = dice_coefficent(pred, target).item()
+        iou = iou_score(pred, target).item()
+        pixel_acc = pixel_accuracy(pred, target).item()
+
+        self.dice_scores.append(dice)
+        self.iou_scores.append(iou)
+        self.pixel_accs.append(pixel_acc)
+
+    def get_metrics(self):
+
+        return {
+            'dice_coefficient': np.mean(self.dice_scores) if self.dice_scores else 0.0,
+            'mIoU': np.mean(self.iou_scores) if self.iou_scores else 0.0,
+            'pixel_accuracy': np.mean(self.pixel_accs) if self.pixel_accs else 0.0
+        }
+
+
 
