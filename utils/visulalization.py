@@ -249,3 +249,66 @@ def plot_metrics_comparison(
         print(f"Saved metrics comparison to {save_path}")
     
     plt.show()
+
+
+def create_inference_visualization(
+    image_path: Path,
+    model,
+    device: torch.device,
+    save_path: Optional[Path] = None
+):
+    # Load image
+    image = cv2.imread(str(image_path), cv2.IMREAD_GRAYSCALE)
+    original_shape = image.shape
+    
+    # Resize for model
+    image_resized = cv2.resize(image, IMAGE_SIZE)
+    image_normalized = image_resized.astype(np.float32) / 255.0
+    
+    # Convert to tensor
+    image_tensor = torch.from_numpy(image_normalized).unsqueeze(0).unsqueeze(0).to(device)
+    
+    # Get prediction
+    model.eval()
+    with torch.no_grad():
+        pred = model(image_tensor)
+        pred_mask = torch.sigmoid(pred)
+        pred_mask = (pred_mask > 0.5).float()
+    
+    # Convert back to numpy
+    pred_mask_np = pred_mask.squeeze().cpu().numpy()
+    
+    # Resize prediction back to original size
+    pred_mask_resized = cv2.resize(pred_mask_np, (original_shape[1], original_shape[0]))
+    
+    # Create visualization
+    fig = plt.figure(figsize=(15, 5))
+    
+    # Original image
+    plt.subplot(1, 3, 1)
+    plt.imshow(image, cmap='gray')
+    plt.title('Original Image', fontsize=14, fontweight='bold')
+    plt.axis('off')
+    
+    # Predicted mask
+    plt.subplot(1, 3, 2)
+    plt.imshow(pred_mask_resized, cmap='hot')
+    plt.title('Predicted Segmentation Mask', fontsize=14, fontweight='bold')
+    plt.axis('off')
+    
+    # Overlay
+    plt.subplot(1, 3, 3)
+    plt.imshow(image, cmap='gray')
+    plt.imshow(pred_mask_resized, cmap='hot', alpha=0.5)
+    plt.title('Overlay', fontsize=14, fontweight='bold')
+    plt.axis('off')
+    
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=FIGURE_DPI, bbox_inches='tight')
+        print(f"Saved inference visualization to {save_path}")
+    
+    plt.show()
+    
+    return pred_mask_resized
