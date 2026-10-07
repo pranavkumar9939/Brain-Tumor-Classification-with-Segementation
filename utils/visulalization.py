@@ -136,3 +136,116 @@ def plot_training_curves(
         print(f"Saved training curves to {save_path}")
     
     plt.show()
+
+
+def plot_confusion_matrix(
+    cm: np.ndarray,
+    class_names: List[str],
+    save_path: Optional[Path] = None,
+    normalize: bool = False
+):
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        fmt = '.2f'
+    else:
+        fmt = 'd'
+    
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(
+        cm,
+        annot=True,
+        fmt=fmt,
+        cmap='Blues',
+        xticklabels=class_names,
+        yticklabels=class_names,
+        cbar_kws={'label': 'Count' if not normalize else 'Proportion'}
+    )
+    
+    plt.xlabel('Predicted Label', fontsize=12, fontweight='bold')
+    plt.ylabel('True Label', fontsize=12, fontweight='bold')
+    plt.title('Confusion Matrix', fontsize=14, fontweight='bold')
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=FIGURE_DPI, bbox_inches='tight')
+        print(f"Saved confusion matrix to {save_path}")
+    
+    plt.show()
+
+
+def plot_class_distribution(
+    class_counts: dict,
+    title: str = "Class Distribution",
+    save_path: Optional[Path] = None
+):
+    plt.figure(figsize=(10, 6))
+    
+    classes = list(class_counts.keys())
+    counts = list(class_counts.values())
+    
+    bars = plt.bar(classes, counts, color=sns.color_palette("husl", len(classes)))
+    
+    # Add value labels on bars
+    for bar in bars:
+        height = bar.get_height()
+        plt.text(
+            bar.get_x() + bar.get_width() / 2.,
+            height,
+            f'{int(height)}',
+            ha='center',
+            va='bottom',
+            fontsize=11,
+            fontweight='bold'
+        )
+    
+    plt.xlabel('Class', fontsize=12, fontweight='bold')
+    plt.ylabel('Count', fontsize=12, fontweight='bold')
+    plt.title(title, fontsize=14, fontweight='bold')
+    plt.xticks(rotation=45, ha='right')
+    plt.grid(axis='y', alpha=0.3)
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=FIGURE_DPI, bbox_inches='tight')
+        print(f"Saved class distribution to {save_path}")
+    
+    plt.show()
+
+
+def plot_metrics_comparison(
+    results: dict,
+    metric_name: str,
+    save_path: Optional[Path] = None
+):
+    plt.figure(figsize=(12, 6))
+    
+    experiments = list(results.keys())
+    values = [results[exp][metric_name] for exp in experiments]
+    
+    bars = plt.bar(experiments, values, color=sns.color_palette("Set2", len(experiments)))
+    
+    # Add value labels
+    for bar in bars:
+        height = bar.get_height()
+        plt.text(
+            bar.get_x() + bar.get_width() / 2.,
+            height,
+            f'{height:.4f}',
+            ha='center',
+            va='bottom',
+            fontsize=10,
+            fontweight='bold'
+        )
+    
+    plt.xlabel('Experiment / Model', fontsize=12, fontweight='bold')
+    plt.ylabel(metric_name.replace('_', ' ').title(), fontsize=12, fontweight='bold')
+    plt.title(f'{metric_name.replace("_", " ").title()} Comparison', fontsize=14, fontweight='bold')
+    plt.xticks(rotation=45, ha='right')
+    plt.grid(axis='y', alpha=0.3)
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=FIGURE_DPI, bbox_inches='tight')
+        print(f"Saved metrics comparison to {save_path}")
+    
+    plt.show()
