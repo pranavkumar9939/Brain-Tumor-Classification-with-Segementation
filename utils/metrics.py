@@ -75,7 +75,7 @@ def pixel_accuracy(
 
 class DiceLoss(nn.Module):
     """
-    Implementing dice loss for binary segmentation
+    Implementing dice loss for binary segmentation3
     """
 
     def __init__(self, smooth: float = 1e-6):
@@ -160,6 +160,85 @@ class SegmentationMetrics:
             'mIoU': np.mean(self.iou_scores) if self.iou_scores else 0.0,
             'pixel_accuracy': np.mean(self.pixel_accs) if self.pixel_accs else 0.0
         }
+
+
+# Classification metrics 
+
+class ClassificationMetrics:
+    """
+    Class to compute classification metrics
+    """
+
+    def __init__(self, num_classes: int = 4):
+        self.num_classes = num_classes
+        self.reset()
+
+    def reset(self):
+        """Resetting all the metrics"""
+        self.all_preds = []
+        self.all_targets = []
+
+    def update(
+        self,
+        pred: torch.Tensor,
+        target: torch.Tensor
+    ):
+        """Updating metrics with each batch"""
+
+        # get predicted class
+        if pred.dim() > 1:
+            pred_classes = torch.argmax(pred, dim = 1)
+        else:
+            pred_classes = pred
+
+        self.all_preds.extend(pred_classes.cpu().numpy())
+        self.all_targets.extend(target.cpu().numpy())
+
+
+    def get_metrics(self):
+        """
+        Calculate and return all metrics of classification
+        """
+
+        if not self.all_preds:
+            return {
+                'accuracy': 0.0,
+                'precision': 0.0,
+                'recall': 0.0,
+                'f1_score': 0.0
+            }
+
+        preds = np.array(self.all_preds)
+        targets = np.array(self.all_targets)
+
+        metrics = {
+            'accuracy': accuracy_score(targets, preds),
+            'precision': precision_score(targets, preds, average='weighted', zero_division=0),
+            'recall': recall_score(targets, preds, average='weighted', zero_division=0),
+            'f1_score': f1_score(targets, preds, average='weighted', zero_division=0)
+        }
+
+        return metrics
+
+
+    def get_confusion_matrix(self):
+
+        if not self.all_preds:
+            return np.zeros((self.num_classes, self.num_classes))
+
+        return confusion_matrix(self.all_targets, self.all_preds)
+
+    def get_classification_report(self, class_names: list = None):
+
+        if not self.all_preds:
+            return "No Predictions available"
+
+        return classification_report(
+            self.all_targets,
+            self.all_preds,
+            target_names= class_names,
+            zero_division= 0
+        )
 
 
 
