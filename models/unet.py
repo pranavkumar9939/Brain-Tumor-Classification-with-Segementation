@@ -24,9 +24,9 @@ class DoubleConv(nn.Module):
             nn.ReLU(inplace= True)
         )
 
-        def forward(self, x):
+    def forward(self, x):
 
-            return self.double_conv(x)
+        return self.double_conv(x)
 
 
 class Down(nn.Module):

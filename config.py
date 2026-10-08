@@ -50,7 +50,7 @@ MASK_CHANNELS = 1 # Binary Masks
 # Training Hyperparameter 
 
 BATCH_SIZE = 16
-EPOCHS = 100
+EPOCHS = 50
 LEARNING_RATE = 1e-4
 WEIGHT_DECAY = 1e-5
 VALIDATION_SPLIT = 0.15 # 15% of training data for validation

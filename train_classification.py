@@ -186,3 +186,89 @@ class ClassificationTrainer:
         self.model.load_state_dict(checkpoint['model_state_dict'])
 
 
+def train_classifier(classifier_name='mobilenet', device=None, epochs=EPOCHS):
+    """Train a specific classifier"""
+    if device is None:
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
+    # Create datasets
+    train_dataset = BRISCClassificationDataset(
+        root_dir=Classification_Train,
+        transform=get_train_transforms()
+    )
+    
+    val_size = int(VALIDATION_SPLIT * len(train_dataset))
+    train_size = len(train_dataset) - val_size
+    train_dataset, val_dataset = torch.utils.data.random_split(
+        train_dataset,
+        [train_size, val_size],
+        generator=torch.Generator().manual_seed(RANDOM_SEED)
+    )
+    
+    test_dataset = BRISCClassificationDataset(
+        root_dir=Classification_Test,
+        transform=get_val_transforms()
+    )
+    
+    # Data loaders
+    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
+    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
+    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
+    
+    # Model
+    model = get_classifier(classifier_name, num_classes=NUM_CLASSES)
+    
+    # Optimizer and loss
+    optimizer = Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
+    criterion = nn.CrossEntropyLoss()
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=REDUCE_LR_PATIENCE, factor=0.5)
+    
+    # Trainer
+    trainer = ClassificationTrainer(
+        model=model,
+        device=device,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        test_loader=test_loader,
+        optimizer=optimizer,
+        criterion=criterion,
+        scheduler=scheduler,
+        model_name=f'{classifier_name}_classifier'
+    )
+    
+    results = trainer.train(epochs=epochs)
+    
+    plot_training_curves(
+        trainer.history,
+        metrics=['loss', 'acc'],
+        save_path=figures_Dir / f'{classifier_name}_training_curves.png'
+    )
+    
+    return model, results
+
+
+if __name__ == "__main__":
+    torch.manual_seed(RANDOM_SEED)
+    np.random.seed(RANDOM_SEED)
+    
+    # Train all classifiers for comparison (Bonus Task 2)
+    classifiers = ['mobilenet', 'efficientnet', 'densenet']
+    all_results = {}
+    
+    for clf_name in classifiers:
+        print(f"\n{'=' * 80}")
+        print(f"TRAINING {clf_name.upper()} CLASSIFIER")
+        print(f"{'=' * 80}")
+        _, results = train_classifier(clf_name, epochs=50)
+        all_results[clf_name] = results
+    
+    # Compare results
+    print(f"\n{'=' * 80}")
+    print("CLASSIFIER COMPARISON (BONUS TASK 2)")
+    print(f"{'=' * 80}\n")
+    
+    for name, results in all_results.items():
+        print(f"{name.upper()}:")
+        print(f"  Test Accuracy: {results['test_metrics']['accuracy']:.4f}")
+        print(f"  Test F1:       {results['test_metrics']['f1_score']:.4f}")
+        print()

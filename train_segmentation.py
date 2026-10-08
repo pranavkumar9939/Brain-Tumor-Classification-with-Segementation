@@ -141,17 +141,17 @@ class SegmentationTrainer:
             self.history['train_loss'].append(train_loss)
             self.history['val_loss'].append(val_loss)
             self.history['train_dice'].append(train_metrics['dice_coefficient'])
-            self.history['val_dice'].append(val_metrics['dice-coefficient'])
+            self.history['val_dice'].append(val_metrics['dice_coefficient'])
             self.history['train_miou'].append(train_metrics['mIoU'])
             self.history['val_miou'].append(val_metrics['mIoU'])
-            self.history['train_pixel_acc'].append(train_metrics['pixel-accuracy'])
+            self.history['train_pixel_acc'].append(train_metrics['pixel_accuracy'])
             self.history['val_pixel_acc'].append(val_metrics['pixel_accuracy'])
 
             #Print metrics
             print(f"Train Loss:{train_loss:.4f} | Val Loss: {val_loss:.4f}")
-            print(f"Train Dice:{train_metrics['dice_coefficient']:.4f} | Val Dice: {val_metrics['dice-coefficient']:.4f}")
+            print(f"Train Dice:{train_metrics['dice_coefficient']:.4f} | Val Dice: {val_metrics['dice_coefficient']:.4f}")
             print(f"Train mIoU:{train_metrics['mIoU']:.4f} | Val mIoU: {val_metrics['mIoU']:.4f}")
-            print(f"Train Pixel Acc:{train_metrics['pixel-accuracy']:.4f} | Val Pixel Acc: {val_metrics['pixel_accuracy']:.4f}")
+            print(f"Train Pixel Acc:{train_metrics['pixel_accuracy']:.4f} | Val Pixel Acc: {val_metrics['pixel_accuracy']:.4f}")
 
             #Learning rate scheduler
             if self.scheduler:
