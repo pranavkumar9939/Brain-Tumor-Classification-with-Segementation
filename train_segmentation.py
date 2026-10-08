@@ -13,8 +13,9 @@ import sys
 sys.path.append(str(Path(__file__).parent.parent))
 
 from config import *
-from models import Unet, AttentionUNet 
-from utils.data_loader import BRISCClassificationDataset, get_train_transforms, get_val_transforms
+from models.unet import Unet
+from models.attention_unet import AttentionUNet 
+from utils.data_loader import BRISCSegmentationDataset, get_train_transforms, get_val_transforms
 from utils.metrics import DiceBCELoss, SegmentationMetrics
 from utils.visulalization import plot_training_curves
 
@@ -220,3 +221,171 @@ class SegmentationTrainer:
         self.best_val_loss = checkpoint.get('best_val_loss', self.best_val_loss)
 
 
+def train_unet(
+    device = None,
+    epochs = EPOCHS,
+    base_filters = 64
+):
+    """Train U-Net model"""
+    if device is None:
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    print(f"Using device: {device}")
+    
+    # Create datasets
+    train_dataset = BRISCSegmentationDataset(
+        images_dir=Segmentation_Train / 'images',
+        masks_dir=Segmentation_Train / 'masks',
+        transform=get_train_transforms()
+    )
+    
+    val_size = int(VALIDATION_SPLIT * len(train_dataset))
+    train_size = len(train_dataset) - val_size
+    train_dataset, val_dataset = torch.utils.data.random_split(
+        train_dataset,
+        [train_size, val_size],
+        generator=torch.Generator().manual_seed(RANDOM_SEED)
+    )
+    
+    test_dataset = BRISCSegmentationDataset(
+        images_dir=Segmentation_Test / 'images',
+        masks_dir=Segmentation_Test / 'masks',
+        transform=get_val_transforms()
+    )
+    
+    # Create data loaders
+    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
+    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
+    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
+    
+    # Create model
+    model = Unet(in_channels=1, out_channels=1, base_filters=base_filters)
+    
+    # Optimizer and loss
+    optimizer = Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
+    criterion = DiceBCELoss()
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=REDUCE_LR_PATIENCE, factor=0.5, min_lr=MIN_LR)
+    
+    # Trainer
+    trainer = SegmentationTrainer(
+        model=model,
+        device=device,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        test_loader=test_loader,
+        optimizer=optimizer,
+        criterion=criterion,
+        scheduler=scheduler,
+        model_name='unet'
+    )
+    
+    # Train
+    results = trainer.train(epochs=epochs)
+    
+    # Plot curves
+    plot_training_curves(
+        trainer.history,
+        metrics=['loss', 'dice', 'miou', 'pixel_acc'],
+        save_path=figures_Dir / 'unet_training_curves.png'
+    )
+    
+    return model, results
+
+
+def train_attention_unet(device=None, epochs=EPOCHS, base_filters=64):
+    """Train Attention U-Net model"""
+    if device is None:
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
+    print(f"Using device: {device}")
+    
+    # Create datasets (same as U-Net)
+    train_dataset = BRISCSegmentationDataset(
+        images_dir=Segmentation_Train / 'images',
+        masks_dir=Segmentation_Train / 'masks',
+        transform=get_train_transforms()
+    )
+    
+    val_size = int(VALIDATION_SPLIT * len(train_dataset))
+    train_size = len(train_dataset) - val_size
+    train_dataset, val_dataset = torch.utils.data.random_split(
+        train_dataset,
+        [train_size, val_size],
+        generator=torch.Generator().manual_seed(RANDOM_SEED)
+    )
+    
+    test_dataset = BRISCSegmentationDataset(
+        images_dir=Segmentation_Test / 'images',
+        masks_dir=Segmentation_Test / 'masks',
+        transform=get_val_transforms()
+    )
+    
+    # Create data loaders
+    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
+    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
+    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
+    
+    # Create model
+    model = AttentionUNet(in_channels=1, out_channels=1, base_filters=base_filters)
+    
+    # Optimizer and loss
+    optimizer = Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
+    criterion = DiceBCELoss()
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=REDUCE_LR_PATIENCE, factor=0.5, min_lr=MIN_LR)
+    
+    # Trainer
+    trainer = SegmentationTrainer(
+        model=model,
+        device=device,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        test_loader=test_loader,
+        optimizer=optimizer,
+        criterion=criterion,
+        scheduler=scheduler,
+        model_name='attention_unet'
+    )
+    
+    # Train
+    results = trainer.train(epochs=epochs)
+    
+    # Plot curves
+    plot_training_curves(
+        trainer.history,
+        metrics=['loss', 'dice', 'miou', 'pixel_acc'],
+        save_path=figures_Dir / 'attention_unet_training_curves.png'
+    )
+    
+    return model, results
+
+
+if __name__ == "__main__":
+    # Set random seeds for reproducibility
+    torch.manual_seed(RANDOM_SEED)
+    np.random.seed(RANDOM_SEED)
+    
+    # Train U-Net
+    print("\n" + "=" * 80)
+    print("TRAINING U-NET")
+    print("=" * 80)
+    unet_model, unet_results = train_unet()
+    
+    # Train Attention U-Net
+    print("\n" + "=" * 80)
+    print("TRAINING ATTENTION U-NET")
+    print("=" * 80)
+    attn_unet_model, attn_unet_results = train_attention_unet()
+    
+    # Compare results
+    print("\n" + "=" * 80)
+    print("COMPARISON: U-NET vs ATTENTION U-NET")
+    print("=" * 80)
+    print(f"\nU-Net Test Results:")
+    print(f"  Dice: {unet_results['test_metrics']['dice_coefficient']:.4f}")
+    print(f"  mIoU: {unet_results['test_metrics']['mIoU']:.4f}")
+    print(f"  Pixel Acc: {unet_results['test_metrics']['pixel_accuracy']:.4f}")
+    
+    print(f"\nAttention U-Net Test Results:")
+    print(f"  Dice: {attn_unet_results['test_metrics']['dice_coefficient']:.4f}")
+    print(f"  mIoU: {attn_unet_results['test_metrics']['mIoU']:.4f}")
+    print(f"  Pixel Acc: {attn_unet_results['test_metrics']['pixel_accuracy']:.4f}")

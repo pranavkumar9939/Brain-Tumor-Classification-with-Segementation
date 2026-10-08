@@ -108,7 +108,7 @@ class BRISCDatasetInfo:
             print(f"  Masks:  {stats['segmentation'][split]['num_masks']}")
 
 
-class BRISCSegmentationDatatset(Dataset):
+class BRISCSegmentationDataset(Dataset):
 
     def __init__(
         self,
