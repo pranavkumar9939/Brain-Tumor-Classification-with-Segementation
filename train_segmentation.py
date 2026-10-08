@@ -17,7 +17,7 @@ from models.unet import Unet
 from models.attention_unet import AttentionUNet 
 from utils.data_loader import BRISCSegmentationDataset, get_train_transforms, get_val_transforms
 from utils.metrics import DiceBCELoss, SegmentationMetrics
-from utils.visulalization import plot_training_curves
+from utils.visualization import plot_training_curves
 
 class SegmentationTrainer:
 
